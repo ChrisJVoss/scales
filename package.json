@@ -1,0 +1,39 @@
+{
+  "name": "scale-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "install": "electron-rebuild"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-eslint": "^7.2.3",
+    "debug": "^4.0.1",
+    "electron": "^2.0.8",
+    "electron-prebuilt-compile": "^2.0.7",
+    "electron-rebuild": "^1.8.2",
+    "eslint": "^4.19.1",
+    "eslint-config-prettier": "^3.1.0",
+    "eslint-config-react-app": "^2.1.0",
+    "eslint-plugin-flowtype": "^2.50.1",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-jsx-a11y": "^5.1.1",
+    "eslint-plugin-react": "^7.11.1"
+  },
+  "dependencies": {
+    "@material-ui/core": "^3.2.0",
+    "@material-ui/icons": "^3.0.1",
+    "firebase": "^5.5.5",
+    "node-hid": "^0.7.3",
+    "react": "^16.5.0",
+    "react-dom": "^16.5.0",
+    "react-redux": "^5.0.7",
+    "react-router-dom": "^4.3.1",
+    "redux": "^4.0.1",
+    "redux-thunk": "^2.3.0",
+    "serialport": "^7.0.2"
+  }
+}
