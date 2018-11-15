@@ -17,17 +17,16 @@ const theme = createMuiTheme({
 
 const styles = {
   indicatorUnstable: {
-    display: 'block',
     color: '#e20000',
-    borderRadius: 16,
-    boxShadow: '0px 0px 6px 1px #e20000',
-    float: 'right'
+    boxShadow: '0px 0px 6px 1px #e20000'
   },
   indicatorStable: {
-    display: 'block',
     color: '#87bb53',
+    boxShadow: '0px 0px 6px 1px #87bb53'
+  },
+  indicator: {
+    display: 'block',
     borderRadius: 16,
-    boxShadow: '0px 0px 6px 1px #87bb53',
     float: 'right'
   }
 };
@@ -44,9 +43,11 @@ lg={3}
             <Typography variant='body2' color='textSecondary' gutterBottom>
               {props.scaleName}
             </Typography>
-            <Indicator className={classes[props.indicator]} />
+            <Indicator
+              className={`${classes[props.indicator]} ${classes.indicator}`}
+            />
             <Typography variant='h5' component='h2'>
-              {props.weight}
+              {`${props.sign} ${props.weight}`}
               {` ${props.units}`}
             </Typography>
             <Typography
@@ -56,6 +57,7 @@ lg={3}
             >
               {props.wrongUnit}
             </Typography>
+            <Typography variant='h6'>{props.totalWeight}</Typography>
           </CardContent>
           <CardActions>
             <Button

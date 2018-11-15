@@ -13,11 +13,14 @@ const INITIAL_STATE = {
 export default (state = INITIAL_STATE, action) => {
   switch (action.type) {
     case LOGIN_USER:
-      return { ...state, loading: true, error: '' };
+      return Object.assign({ loading: true, error: '' }, state);
     case LOGIN_USER_SUCCESS:
-      return { ...state, ...INITIAL_STATE, user: action.payload };
+      return Object.assign(INITIAL_STATE, { user: action.payload });
     case LOGIN_USER_FAIL:
-      return { ...state, error: 'Invalid Email or Password', loading: false };
+      return Object.assign(INITIAL_STATE, {
+        error: 'Invalid Email or Password',
+        loading: false
+      });
     case LOGOUT_USER:
       return { INITIAL_STATE };
     default:

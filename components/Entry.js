@@ -32,6 +32,7 @@ class Entry extends Component {
     };
     this.onEmailChange = this.onEmailChange.bind(this);
     this.onPasswordChange = this.onPasswordChange.bind(this);
+    this.signIn = this.signIn.bind(this);
   }
 
   onEmailChange(event) {
@@ -40,9 +41,14 @@ class Entry extends Component {
   onPasswordChange(event) {
     this.setState({ password: event.target.value });
   }
+  signIn() {
+    const { email, password } = this.state;
+    this.props.loginUser({ email, password });
+  }
   render() {
-    const { classes } = this.props;
-    if (this.props.user) {
+    const { classes, user, loading } = this.props;
+    if (user) {
+      console.log(user);
       return <Redirect to='/scaleUI' />;
     }
     return (
@@ -65,7 +71,12 @@ class Entry extends Component {
           onChange={this.onPasswordChange}
           value={this.state.password}
         />
-        <Button className={classes.button} variant='contained' color='primary'>
+        <Button
+          className={classes.button}
+          variant='contained'
+          color='primary'
+          onClick={this.signIn}
+        >
           Login
         </Button>
       </div>

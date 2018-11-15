@@ -1,14 +1,20 @@
 /*eslint no-console: ["error", { allow: ["error", "log"] }] */
-import React, { Component, Fragment } from 'react';
+import React from 'react';
 import Entry from './Entry.js';
 import ScaleUI from './ScaleUI';
-import { MemoryRouter, Route, Switch } from 'react-router-dom';
+import ReportGenerator from './ReportGenerator';
+import { Route, Switch } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { store } from '../store';
 
 const App = () => (
-  <Switch>
-    <Route exact path='/' component={Entry} />
-    <Route exact path='/scaleUI' component={ScaleUI} />
-  </Switch>
+  <Provider store={store}>
+    <Switch>
+      <Route exact path='/' component={Entry} />
+      <Route exact path='/scaleUI' component={ScaleUI} />
+      <Route exact path='/report' component={ReportGenerator} />
+    </Switch>
+  </Provider>
 );
 
 export default App;
