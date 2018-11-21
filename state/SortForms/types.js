@@ -12,3 +12,7 @@ export const CREATED_DRUM = 'scale-system/state/SortForms/CREATED_DRUM';
 export const SWAPPED_BUCKET = 'scale-system/state/SortForms/SWAPPED_BUCKET';
 export const GOT_PAILS = 'scale-system/state/SortForms/GOT_PAILS';
 export const DATE_SET = 'scale-system/state/SortForms/DATE_SET';
+export const PAIL_WEIGHTS = 'scale-system/state/SortForms/PAIL_WEIGHTS';
+export const GOT_SETTINGS = 'scale-system/state/SortForms/GOT_SETTINGS';
+export const FAILED_TO_GET_SETTINGS =
+  'scale-system/state/SortForms/FAILED_TO_GET_SETTINGS';

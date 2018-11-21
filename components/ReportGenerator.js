@@ -3,8 +3,8 @@ import { connect } from 'react-redux';
 import compose from 'recompose/compose';
 import { withRouter } from 'react-router-dom';
 import { Redirect } from 'react-router';
-import { withStyles } from '@material-ui/core/styles';
-import { getSortForms } from '../state/SortForms/actions';
+import { withStyles, createMuiTheme } from '@material-ui/core/styles';
+import { getSortForms, setDate } from '../state/SortForms/actions';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -12,10 +12,15 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
+import TextField from '@material-ui/core/TextField';
 import PrintIcon from '@material-ui/icons/Print';
-import BackIcon from '@material-ui/icons/KeyboardBackspace';
+import BackIcon from '@material-ui/icons/ArrowBack';
 
-import { store } from '../store.js';
+const theme = createMuiTheme({
+  typography: {
+    useNextVariants: true
+  }
+});
 
 const styles = theme => ({
   '@media print': {
@@ -45,10 +50,7 @@ class ReportGenerator extends Component {
     this.createRows = this.createRows.bind(this);
   }
 
-  componentDidMount() {
-    console.log('mounting');
-    this.props.getSortForms(this.props.date);
-  }
+  componentDidMount() {}
 
   onBackClick() {
     this.setState({ goBack: true });
@@ -57,7 +59,6 @@ class ReportGenerator extends Component {
   createRows(sortForms) {
     console.log(sortForms);
     return sortForms.map(form => {
-      console.log(form, form.JobId);
       return (
         <TableRow key={form.BoxId}>
           <TableCell numeric>{form.BoxId}</TableCell>
@@ -84,6 +85,7 @@ class ReportGenerator extends Component {
             {form.Contents.Other ? form.Contents.Other : 0}
           </TableCell>
           <TableCell numeric>{form.TotalWeight}</TableCell>
+          <TableCell numeric>{form.CellPhoneCount}</TableCell>
         </TableRow>
       );
     });
@@ -102,6 +104,34 @@ class ReportGenerator extends Component {
         <Button className={classes.noPrint} onClick={() => window.print()}>
           <PrintIcon />
         </Button>
+        <TextField
+          id='date1'
+          label='From Date'
+          type='date'
+          value={this.props.dateStart}
+          onChange={event =>
+            this.props.setDate('dateStart', event.target.value)
+          }
+          className={classes.noPrint}
+        />
+        <TextField
+          id='date2'
+          label='To Date'
+          type='date'
+          value={this.props.dateEnd}
+          onChange={event => this.props.setDate('dateEnd', event.target.value)}
+          className={classes.noPrint}
+        />
+        <Button
+          className={classes.noPrint}
+          color='primary'
+          variant='contained'
+          onClick={() =>
+            this.props.getSortForms(this.props.dateStart, this.props.dateEnd)
+          }
+        >
+          Get Forms
+        </Button>
         <Typography style={{ float: 'right' }}>Units: lbs</Typography>
         <Table padding='dense' className={classes.root}>
           <TableHead>
@@ -117,13 +147,13 @@ class ReportGenerator extends Component {
                 NiCd
               </TableCell>
               <TableCell numeric className={classes.header}>
-                NiMH
+                Ni-MH
               </TableCell>
               <TableCell numeric className={classes.header}>
                 Li-Ion
               </TableCell>
               <TableCell numeric className={classes.header}>
-                Li
+                Lithium
               </TableCell>
               <TableCell numeric className={classes.header}>
                 SSLA
@@ -133,6 +163,9 @@ class ReportGenerator extends Component {
               </TableCell>
               <TableCell numeric className={classes.header}>
                 Total
+              </TableCell>
+              <TableCell numeric className={classes.header}>
+                Cell Phones
               </TableCell>
             </TableRow>
           </TableHead>
@@ -144,633 +177,16 @@ class ReportGenerator extends Component {
 }
 
 const mapStateToProps = state => {
-  const { forms, date } = state.sortForms;
+  const { forms, dateStart, dateEnd } = state.sortForms;
   console.log(forms);
-  return { forms, date };
+  return { forms, dateStart, dateEnd };
 };
 
 export default compose(
   withRouter,
-  withStyles(styles),
+  withStyles(styles, { theme }),
   connect(
     mapStateToProps,
-    { getSortForms }
+    { getSortForms, setDate }
   )
 )(ReportGenerator);
-
-/*
-data: [
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  },
-  {
-    referenceID: '123456789',
-    sortedBy: 'Voss, C',
-    Alk: 15,
-    NiCd: 17,
-    NiMH: 128,
-    LiIon: 14.23,
-    Li: 6,
-    ssla: 1,
-    other: 7,
-    unit: 'lb',
-    total: 188.23
-  }
-]
-};
-*/

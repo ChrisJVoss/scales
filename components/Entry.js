@@ -1,12 +1,15 @@
 import React, { Component } from 'react';
+import { machineIdSync } from 'node-machine-id';
 import { connect } from 'react-redux';
 import compose from 'recompose/compose';
 import { withRouter } from 'react-router-dom';
 import { Redirect } from 'react-router';
 import { loginUser } from '../state/Auth/actions';
+import { getSettings } from '../state/SortForms/actions';
 import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 const styles = theme => ({
   container: {
@@ -20,6 +23,13 @@ const styles = theme => ({
   },
   button: {
     margin: theme.spacing.unit
+  },
+  progress: {
+    margin: theme.spacing.unit * 2
+  },
+  noSetting: {
+    display: 'flex',
+    justifyContent: 'center'
   }
 });
 
@@ -35,6 +45,11 @@ class Entry extends Component {
     this.signIn = this.signIn.bind(this);
   }
 
+  componentDidMount() {
+    let machineId = machineIdSync({ original: true });
+    this.props.getSettings(machineId);
+  }
+
   onEmailChange(event) {
     this.setState({ email: event.target.value });
   }
@@ -46,15 +61,23 @@ class Entry extends Component {
     this.props.loginUser({ email, password });
   }
   render() {
-    const { classes, user, loading } = this.props;
+    const { classes, user, loading, noSettings } = this.props;
+    if (noSettings) {
+      return (
+        <div className={classes.noSetting}>
+          <h5>
+            This machine is not configured. Please contact IT support to add the
+            machine ID to Firestore.
+          </h5>
+        </div>
+      );
+    }
     if (user) {
-      console.log(user);
       return <Redirect to='/scaleUI' />;
     }
     return (
       <div>
         <h3>Please sign in.</h3>
-
         <TextField
           className={classes.textField}
           label='Email'
@@ -71,14 +94,19 @@ class Entry extends Component {
           onChange={this.onPasswordChange}
           value={this.state.password}
         />
-        <Button
-          className={classes.button}
-          variant='contained'
-          color='primary'
-          onClick={this.signIn}
-        >
-          Login
-        </Button>
+        {this.props.loading ? (
+          <CircularProgress className={classes.progress} />
+        ) : (
+          <Button
+            className={classes.button}
+            variant='contained'
+            color='primary'
+            onClick={this.signIn}
+          >
+            Login
+          </Button>
+        )}
+        <div style={{ color: 'red' }}>{this.props.error}</div>
       </div>
     );
   }
@@ -86,7 +114,8 @@ class Entry extends Component {
 
 const mapStateToProps = state => {
   const { user, error, loading } = state.auth;
-  return { user, error, loading };
+  const { noSettings } = state.sortForms;
+  return { user, error, loading, noSettings };
 };
 
 export default compose(
@@ -94,6 +123,6 @@ export default compose(
   withStyles(styles),
   connect(
     mapStateToProps,
-    { loginUser }
+    { loginUser, getSettings }
   )
 )(Entry);
