@@ -7,6 +7,8 @@ import compose from 'recompose/compose';
 import { withRouter } from 'react-router-dom';
 import { Redirect } from 'react-router';
 import { connect } from 'react-redux';
+import { app } from 'electron';
+import classNames from 'classnames';
 import {
   uploadBox,
   swapBucket,
@@ -14,8 +16,9 @@ import {
   mergeBoxIntoPails,
   createDrum,
   getPails,
-  setDate
+  getPailWeights
 } from '../state/SortForms/actions';
+import { logoutUser } from '../state/Auth/actions';
 import Readline from '@serialport/parser-readline';
 import ScaleDisplay from './ScaleDisplayCard';
 import { withStyles } from '@material-ui/core/styles';
@@ -24,18 +27,20 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Modal from '@material-ui/core/Modal';
 import Paper from '@material-ui/core/Paper';
-
-/*
-wrapper: {
-  display: 'grid',
-  gridTemplateColumns: [125, 125, 125],
-  gridTemplateRows: [250, 250, 250]
-}
-*/
+import RightArrowIcon from '@material-ui/icons/ArrowForward';
+import ExitIcon from '@material-ui/icons/ExitToApp';
+import yellow from '@material-ui/core/colors/yellow';
 
 const styles = theme => ({
   button: {
     margin: theme.spacing.unit
+  },
+  yellowButton: {
+    color: '#000000',
+    backgroundColor: yellow[500],
+    '&:hover': {
+      backgroundColor: yellow[700]
+    }
   },
   barCode: { margin: 10, width: '100%', maxWidth: 350, paddingRight: 10 },
   rootModal: {
@@ -52,25 +57,18 @@ class ScaleUI extends Component {
       machineId: '',
       parser: new Readline({ delimiter: '\r\n' }),
       scalePorts: {},
-      unitOfMeasurement: 'lb',
+      unitOfMeasurement: this.props.settings.units,
       bucketSwaps: {},
       boxes: [],
-      date: null,
-      chemistries: [
-        'NiCd',
-        'Li-Ion',
-        'Ni-MH',
-        'Lead',
-        'Alkaline',
-        'Lithium',
-        'Other'
-      ],
+      chemistries: this.props.settings.chemistries,
       pailToSwap: '',
       chemToSwap: '',
       goToReport: false,
       boxId: '',
       scanDrumModalOpen: false,
-      drumId: ''
+      drumId: '',
+      cellCountModalOpen: false,
+      cellCount: ''
     };
     this.zeroOut = this.zeroOut.bind(this);
     this.boxCompleteClick = this.boxCompleteClick.bind(this);
@@ -83,11 +81,14 @@ class ScaleUI extends Component {
     this.goToForms = this.goToForms.bind(this);
     this.onboxIdChange = this.onboxIdChange.bind(this);
     this.zeroAllScales = this.zeroAllScales.bind(this);
-    this.createPailsClick = this.createPailsClick.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleOpen = this.handleOpen.bind(this);
     this.handleDrumIdChange = this.handleDrumIdChange.bind(this);
     this.submitPailSwap = this.submitPailSwap.bind(this);
+    this.handleCellCountChange = this.handleCellCountChange.bind(this);
+    this.submitBoxComplete = this.submitBoxComplete.bind(this);
+    this.handleBoxCompleteOpen = this.handleBoxCompleteOpen.bind(this);
+    this.onExitClick = this.onExitClick.bind(this);
   }
   componentDidMount() {
     this.helper();
@@ -96,9 +97,11 @@ class ScaleUI extends Component {
       { machineId },
       this.props.getPails(machineId, this.state.chemistries)
     );
+    this.props.getPailWeights(machineId);
   }
 
   componentWillUnmount() {
+    this.props.pailListener();
     for (let scale in this.state.scalePorts) {
       let path = this.state.scalePorts[scale].portPath;
       path.close();
@@ -160,6 +163,7 @@ class ScaleUI extends Component {
     let boxes = this.state.boxes.slice();
     const box = {
       BoxId: this.state.boxId.slice(11, 23),
+      CellPhoneCount: this.state.cellCount,
       Contents: {},
       TotalWeight: 0,
       Unit: this.state.unitOfMeasurement,
@@ -176,7 +180,6 @@ class ScaleUI extends Component {
       const weight =
         parseFloat(this.state.scalePorts[scale].scaleData) +
         swappedWeight.slice().reduce((acc, cV) => acc + cV);
-      console.log(weight);
       if (weight && weight !== 0) {
         box.Contents[this.state.chemistries[count]] = parseFloat(
           weight.toFixed(2)
@@ -190,20 +193,20 @@ class ScaleUI extends Component {
     boxes.push(box);
     this.props.uploadBox(box);
     this.props.mergeBoxIntoPails(box, this.props.pails);
-    this.setState({ boxes, bucketSwaps: {}, boxId: '' });
+    this.setState({ boxes, bucketSwaps: {}, boxId: '', cellCount: '' });
     this.zeroAllScales();
   }
 
   zeroAllScales() {
     for (let scale in this.state.scalePorts) {
-      let written = this.state.scalePorts[scale].portPath.write(
+      this.state.scalePorts[scale].portPath.write(
         Buffer.from([0x5a, 0xd, 0xa]),
         'utf8',
         error => console.log('err: ', error)
       );
     }
     for (let scale in this.state.scalePorts) {
-      let written = this.state.scalePorts[scale].portPath.write(
+      this.state.scalePorts[scale].portPath.write(
         Buffer.from([0x5a, 0xd, 0xa]),
         'utf8',
         error => console.log('err: ', error)
@@ -247,10 +250,6 @@ class ScaleUI extends Component {
     this.setState({ unitOfMeasurement: unit });
   }
 
-  createPailsClick() {
-    this.props.createPail(this.state.chemistries, this.state.machineId);
-  }
-
   swapBucket(chemistry, pails) {
     if (this.state.stable === 'indicatorUnstable') {
       alert('Please wait till the scale is stable');
@@ -262,7 +261,6 @@ class ScaleUI extends Component {
       chemToSwap: chemistry
     });
     console.log('SwapBucket', pails[chemistry], this.state.drumId);
-    // this.props.swapBucket(pails[chemistry], this.state.drumId);
   }
 
   convertToCorrectUnits(scaleData, correctUnit, scale, units) {
@@ -304,11 +302,6 @@ class ScaleUI extends Component {
       alert('Please enter a drum identification number.');
       return;
     }
-    let boxes = this.state.boxes.slice();
-    boxes.forEach(box => {
-      delete box.Contents[this.state.chemToSwap];
-    });
-    console.log(boxes);
     this.props.swapBucket(
       this.state.pailToSwap,
       this.state.drumId,
@@ -318,8 +311,7 @@ class ScaleUI extends Component {
       scanDrumModalOpen: false,
       drumId: '',
       pailToSwap: '',
-      chemToSwap: '',
-      boxes
+      chemToSwap: ''
     });
   }
 
@@ -335,6 +327,31 @@ class ScaleUI extends Component {
     this.setState({ drumId: event.target.value });
   }
 
+  handleCellCountChange(event) {
+    this.setState({ cellCount: event.target.value });
+  }
+
+  handleBoxCompleteOpen() {
+    this.setState({ cellCountModalOpen: true });
+  }
+
+  handleBoxCompleteClose() {
+    this.setState({ cellCountModalOpen: false });
+  }
+
+  onExitClick() {
+    this.props.logoutUser();
+  }
+
+  submitBoxComplete() {
+    if (this.state.cellCount === '') {
+      alert('Please enter the number of cell phones');
+      return;
+    }
+    this.boxCompleteClick();
+    this.setState({ cellCountModalOpen: false });
+  }
+
   renderScales() {
     let count = 0;
     const scaleList = [];
@@ -348,23 +365,21 @@ class ScaleUI extends Component {
       ) {
         wrongUnit = true;
       }
+      let totalWeight = this.props.pailWeights[this.state.chemistries[count]];
 
-      let boxWeight = parseFloat(
-        this.state.boxes.reduce((acc, cV) => {
-          return acc + cV.Contents[this.state.chemistries[count]];
-        }, 0)
-      );
-      let totalWeight = boxWeight;
       if (this.state.scalePorts[scale].sign === '+') {
-        totalWeight += weight;
+        totalWeight = parseFloat(totalWeight) + weight;
+        totalWeight = totalWeight.toFixed(2);
       }
       if (this.state.scalePorts[scale].sign === '-') {
-        totalWeight -= weight;
+        totalWeight = parseFloat(totalWeight) - weight;
+        totalWeight = totalWeight.toFixed(2);
       }
-      totalWeight = totalWeight.toFixed(2);
+
       if (totalWeight === 'NaN') {
-        totalWeight = '0.0';
+        totalWeight = '0';
       }
+
       scaleList.push(
         <ScaleDisplay
           weight={weight}
@@ -388,13 +403,16 @@ class ScaleUI extends Component {
   }
 
   render() {
-    const { classes } = this.props;
+    const { classes, user } = this.props;
     if (this.state.goToReport) {
       return <Redirect to='/report' />;
     }
+    if (!user) {
+      return <Redirect to='/' />;
+    }
     return (
       <div>
-        <Modal open={this.state.scanDrumModalOpen}>
+        <Modal open={this.state.scanDrumModalOpen} onClose={this.handleClose}>
           <Paper
             style={{
               width: '50%',
@@ -421,7 +439,57 @@ class ScaleUI extends Component {
             </div>
           </Paper>
         </Modal>
-        <h1>Scale System</h1>
+        <Modal
+          open={this.state.cellCountModalOpen}
+          onClose={this.handleBoxCompleteClose}
+        >
+          <Paper
+            style={{
+              width: '50%',
+              height: 150,
+              transform: `translate(50%, 50%)`
+            }}
+          >
+            <div style={{ margin: 15, textAlign: 'center' }}>
+              <h4>How many cell phones were included?.</h4>
+              <TextField
+                value={this.state.cellCount}
+                onChange={this.handleCellCountChange}
+                label='Cell Phones'
+                variant='outlined'
+                autoFocus
+              />
+              <Button
+                className={classes.button}
+                color='primary'
+                onClick={this.submitBoxComplete}
+              >
+                Submit
+              </Button>
+            </div>
+          </Paper>
+        </Modal>
+        <div>
+          <Button
+            className={classes.button}
+            color='secondary'
+            onClick={this.onExitClick}
+          >
+            <ExitIcon />
+          </Button>
+          <Button
+            style={{ float: 'right' }}
+            className={classes.button}
+            color='secondary'
+            onClick={this.goToForms}
+          >
+            Print Forms
+            <RightArrowIcon style={{ marginLeft: 5 }} />
+          </Button>
+        </div>
+        <div style={{ display: 'flex' }}>
+          <h1>Scale System</h1>
+        </div>
         <TextField
           label='Bar Code'
           variant='outlined'
@@ -430,48 +498,41 @@ class ScaleUI extends Component {
           value={this.state.boxId}
           autoFocus
         />
+        <Button
+          className={classes.button}
+          color='primary'
+          onClick={this.handleBoxCompleteOpen}
+          variant='contained'
+        >
+          Complete Box
+        </Button>
         <div>
           <Grid container spacing={16}>
             {this.renderScales()}
           </Grid>
           <Button
-            className={classes.button}
+            className={classNames(classes.button, classes.yellowButton)}
             color='primary'
+            variant='contained'
             onClick={this.zeroOut}
           >
             Tare/Zero All Scales
           </Button>
-          <Button
-            className={classes.button}
-            color='secondary'
-            onClick={this.goToForms}
-          >
-            Print Forms
-          </Button>
-          <Button
-            className={classes.button}
-            color='primary'
-            onClick={this.boxCompleteClick}
-          >
-            Complete Box
-          </Button>
-
-          <TextField
-            id='date'
-            label='Form Date'
-            type='date'
-            value={this.props.date}
-            onChange={event => this.props.setDate(event.target.value)}
-          />
         </div>
       </div>
     );
   }
 }
 const mapStateToProps = state => {
-  const { fetching, pails, date } = state.sortForms;
+  const {
+    fetching,
+    pails,
+    pailWeights,
+    pailListener,
+    settings
+  } = state.sortForms;
   const { user } = state.auth;
-  return { fetching, user, pails, date };
+  return { fetching, user, pails, pailWeights, pailListener, settings };
 };
 
 export default compose(
@@ -486,7 +547,8 @@ export default compose(
       mergeBoxIntoPails,
       createDrum,
       getPails,
-      setDate
+      getPailWeights,
+      logoutUser
     }
   )
 )(ScaleUI);

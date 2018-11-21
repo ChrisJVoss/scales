@@ -2,32 +2,64 @@ import {
   GETTING_SORT_FORMS,
   GOT_SORT_FORMS,
   UPLOAD_SUCCESSFUL,
-  MERGING_BUCKET,
-  UPLOADING_MERGE,
   CREATED_PAILS,
   MERGING_BOX_TO_PAIL,
   CREATED_DRUM,
   SWAPPED_BUCKET,
   GOT_PAILS,
-  DATE_SET
+  DATE_SET,
+  PAIL_WEIGHTS,
+  GOT_SETTINGS,
+  FAILED_TO_GET_SETTINGS
 } from './types';
 import firebase from 'firebase';
 import { Firestore } from '../../config.js';
 
-export const setDate = date => {
-  return { type: DATE_SET, payload: date };
+export const setDate = (dateType, date) => {
+  return { type: DATE_SET, payload: { dateType, date } };
 };
 
-export const getSortForms = date => {
+export const getSettings = machineId => {
+  return dispatch => {
+    let settings = {};
+    Firestore.collection('Admin')
+      .where('Machines', 'array-contains', machineId)
+      .get()
+      .then(snapshot => {
+        snapshot.forEach(doc => {
+          let data = doc.data();
+          settings.chemistries = data.Chemistries;
+          settings.units = data.Units;
+        });
+        console.log(settings);
+        if (
+          Object.keys(settings).length === 0 &&
+          settings.constructor === Object
+        ) {
+          console.log('no settings');
+          dispatch({ type: FAILED_TO_GET_SETTINGS });
+        } else {
+          dispatch({ type: GOT_SETTINGS, payload: settings });
+        }
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  };
+};
+
+export const getSortForms = (dateStart, dateEnd) => {
   console.log('called');
   return dispatch => {
     dispatch({ type: GETTING_SORT_FORMS });
-    const time = Date.parse(date) / 1000;
-    const timestamp = new firebase.firestore.Timestamp(time, 0);
-    console.log(timestamp);
+    const timeStart = Date.parse(dateStart) / 1000;
+    const timestampStart = new firebase.firestore.Timestamp(timeStart, 0);
+    const timeEnd = Date.parse(dateEnd) / 1000;
+    const timestampEnd = new firebase.firestore.Timestamp(timeEnd, 0);
     let forms = [];
     Firestore.collection('BoxDocuments')
-      .where('SortedOn', '==', timestamp)
+      .where('SortedOn', '>=', timestampStart)
+      .where('SortedOn', '<=', timestampEnd)
       .get()
       .then(snapshot => {
         snapshot.forEach(doc => {
@@ -107,7 +139,10 @@ export const swapBucket = (pailRef, drumId, machineId) => {
           .doc(drumId)
           .set(
             {
-              Boxes: data.Boxes,
+              Boxes: firebase.firestore.FieldValue.arrayUnion.apply(
+                null,
+                data.Boxes
+              ),
               DrumId: drumId
             },
             { merge: true }
@@ -162,6 +197,30 @@ export const getPails = (machineId, chemistries) => {
           dispatch(createPail(missingChems, machineId));
         }
         dispatch({ type: GOT_PAILS, payload: pails });
+      });
+  };
+};
+/*
+export const getChemistries = () => {
+  return dispatch => {
+
+  }
+}
+*/
+
+export const getPailWeights = machineId => {
+  return dispatch => {
+    let weights = {};
+    const listener = Firestore.collection('PailDocuments')
+      .where('Completed', '==', false)
+      .where('MachineId', '==', machineId)
+      .onSnapshot(snapshot => {
+        snapshot.forEach(doc => {
+          let data = doc.data();
+          let weight = data.Boxes.reduce((acc, cV) => acc + cV.Weight, 0);
+          weights[data.Chemistry] = weight.toFixed(2);
+        });
+        dispatch({ type: PAIL_WEIGHTS, payload: { weights, listener } });
       });
   };
 };
